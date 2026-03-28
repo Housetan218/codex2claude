@@ -22,7 +22,7 @@ The normal `ask` flow is:
 6. parse Claude's JSON response
 7. persist updated thread state and a run artifact
 8. append a structured bridge log entry
-9. print Claude's `result` to stdout
+9. render either prefixed text output or structured JSON to stdout
 
 ## Command Responsibilities
 
@@ -31,7 +31,8 @@ The normal `ask` flow is:
 - owns the end-to-end request flow
 - persists the latest Claude `session_id`
 - emits run records for observability
-- returns Claude result text directly
+- returns either `[model: <name>] <reply>` or JSON via `--json`
+- resolves the model name from Claude JSON without adding extra bridge-side session logic
 
 ### `status`
 
@@ -152,6 +153,13 @@ Expected Claude contract:
 - output format is JSON
 - `result` is the human-readable reply
 - `session_id` may be returned and later reused with `--resume`
+- `modelUsage` may expose one or more concrete model identifiers for the response
+
+Current model-resolution policy:
+
+- prefer the first string key in `modelUsage`
+- fall back to `model` or `model_name` when present
+- render `unknown` when the Claude payload does not expose a model identifier
 
 If Claude returns malformed JSON or invalid fields, the bridge treats that as state/contract corruption rather than silently guessing.
 

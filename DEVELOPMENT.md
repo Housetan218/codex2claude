@@ -42,6 +42,7 @@ Bridge smoke:
 
 ```bash
 codex2claude ask --prompt "Reply with ok only" --workspace "$PWD" --new
+codex2claude ask --prompt "Reply with ok only" --workspace "$PWD" --new --json
 codex2claude doctor --workspace "$PWD"
 ```
 
@@ -116,6 +117,11 @@ codex2claude doctor --workspace "$PWD"
 codex2claude forget --workspace "$PWD"
 codex2claude gc --max-age-days 7
 ```
+
+Current `ask` output modes:
+
+- default: `[model: <name>] <reply>`
+- `--json`: `{model, reply, session_id}`
 
 Skill debugging notes:
 

@@ -11,6 +11,7 @@ Current scope:
 - Codex sends a prompt to Claude through the local `claude` CLI
 - the bridge stores Claude `session_id`
 - later asks can resume the same Claude thread
+- `ask` surfaces the resolved Claude model in its output
 - a thin Codex skill maps natural-language requests onto the bridge CLI
 
 Out of scope for the current product:
@@ -42,6 +43,7 @@ Out of scope for the current product:
 - State writes should remain atomic via temp-file replace.
 - Same-thread concurrent asks must fail with lock conflict, not corrupt state.
 - `doctor` should stay focused on bridge health, Claude availability, and thread-state diagnostics.
+- Human-readable `ask` output should keep model visibility without moving session logic into the skill.
 
 ## Common Commands
 
@@ -69,6 +71,7 @@ Bridge smoke:
 
 ```bash
 codex2claude ask --prompt "Reply with ok only" --workspace "$PWD" --new
+codex2claude ask --prompt "Reply with ok only" --workspace "$PWD" --new --json
 codex2claude doctor --workspace "$PWD"
 ```
 
