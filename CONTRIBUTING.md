@@ -75,6 +75,28 @@ python3 -m build
 python3 -m twine check dist/*
 ```
 
+## GitHub Actions
+
+This repository ships with:
+
+- `.github/workflows/test.yml`: runs unit tests and packaging checks on push and pull request
+- `.github/workflows/release.yml`: builds distributions and publishes to PyPI on version tags
+
+## PyPI Trusted Publishing
+
+The release workflow is configured for PyPI Trusted Publishing, which is the current recommended approach for GitHub Actions based publishing.
+
+PyPI project configuration should trust:
+
+- owner: `Housetan218`
+- repository: `codex2claude`
+- workflow: `.github/workflows/release.yml`
+- environment: `pypi`
+
+If `codex2claude` does not yet exist on PyPI, create it with PyPI's Trusted Publishing flow for a new project and register the same repository, workflow, and environment there first.
+
+After that is configured on PyPI, pushing a tag like `v0.1.2` will build and publish the package without a manually managed API token.
+
 ## Pull Requests
 
 - Keep changes focused.

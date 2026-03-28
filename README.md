@@ -263,3 +263,9 @@ Bidirectional agent protocols are out of scope for v1.
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for development, verification, and release steps.
+
+## CI And Releases
+
+GitHub Actions runs unit tests and packaging checks on pushes and pull requests.
+
+PyPI publishing is wired through `.github/workflows/release.yml` and is intended to use PyPI Trusted Publishing from GitHub Actions. Repository maintainers still need to configure the matching trusted publisher entry on PyPI before tag-based publishing can succeed.
