@@ -8,6 +8,86 @@ from unittest import mock
 
 
 class AdminCommandsTest(unittest.TestCase):
+    def test_doctor_reports_ok_when_claude_is_available(self) -> None:
+        from codex2claude.cli import main
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir) / "workspace"
+            workspace.mkdir()
+
+            stdout_parts: list[str] = []
+            stderr_parts: list[str] = []
+            with mock.patch("codex2claude.cli.read_claude_version", return_value="2.1.81 (Claude Code)"), mock.patch(
+                "sys.stdout.write", side_effect=stdout_parts.append
+            ), mock.patch("sys.stderr.write", side_effect=stderr_parts.append):
+                exit_code = main(["doctor", "--workspace", str(workspace)])
+
+            self.assertEqual(exit_code, 0)
+            payload = json.loads("".join(stdout_parts))
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["claude"]["status"], "ok")
+            self.assertEqual(payload["thread_state"]["status"], "missing")
+            self.assertEqual(stderr_parts, [])
+
+    def test_doctor_returns_nonzero_when_claude_is_unavailable(self) -> None:
+        from codex2claude.cli import main
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir) / "workspace"
+            workspace.mkdir()
+
+            stdout_parts: list[str] = []
+            with mock.patch("codex2claude.cli.read_claude_version", return_value=None), mock.patch(
+                "sys.stdout.write", side_effect=stdout_parts.append
+            ):
+                exit_code = main(["doctor", "--workspace", str(workspace)])
+
+            self.assertNotEqual(exit_code, 0)
+            payload = json.loads("".join(stdout_parts))
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["claude"]["status"], "error")
+
+    def test_doctor_reports_existing_thread_state(self) -> None:
+        from codex2claude.cli import main
+        from codex2claude.threading import make_thread_key
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            home = Path(temp_dir) / "home"
+            workspace = Path(temp_dir) / "workspace"
+            home.mkdir()
+            workspace.mkdir()
+            thread_key = make_thread_key(str(workspace.resolve()), None)
+            state_path = home / ".codex" / "codex2claude" / "threads" / f"{thread_key}.json"
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(
+                json.dumps(
+                    {
+                        "thread_key": thread_key,
+                        "workspace_root": str(workspace.resolve()),
+                        "thread_name": None,
+                        "claude_session_id": "session-123",
+                        "created_at": "2026-03-28T00:00:00Z",
+                        "last_used_at": "2026-03-28T00:00:00Z",
+                        "last_status": "ok",
+                        "bridge_version": "0.1.2",
+                        "claude_version": "2.1.81 (Claude Code)",
+                        "last_error": None,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            stdout_parts: list[str] = []
+            with mock.patch.dict(os.environ, {"HOME": str(home)}, clear=False), mock.patch(
+                "codex2claude.cli.read_claude_version", return_value="2.1.81 (Claude Code)"
+            ), mock.patch("sys.stdout.write", side_effect=stdout_parts.append):
+                exit_code = main(["doctor", "--workspace", str(workspace)])
+
+            self.assertEqual(exit_code, 0)
+            payload = json.loads("".join(stdout_parts))
+            self.assertEqual(payload["thread_state"]["status"], "ok")
+            self.assertEqual(payload["thread_state"]["session_id"], "session-123")
+
     def test_status_command_on_missing_thread_returns_nonzero(self) -> None:
         from codex2claude.cli import main
 

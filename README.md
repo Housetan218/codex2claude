@@ -23,6 +23,7 @@ Implemented and locally verified on this machine:
 - `status`
 - `forget`
 - `gc`
+- `doctor`
 - automatic resume via stored Claude `session_id`
 - same-thread lock conflict handling
 
@@ -83,6 +84,12 @@ Inspect stored state:
 
 ```bash
 codex2claude status --workspace "$PWD"
+```
+
+Run diagnostics:
+
+```bash
+codex2claude doctor --workspace "$PWD"
 ```
 
 Forget the current thread:
@@ -182,6 +189,7 @@ If a trigger phrase does not route to Claude:
 2. Test with a high-signal phrase such as `问问cc：请只回复 ok`.
 3. If needed, use the most explicit form: `Use the codex-to-claude skill. Ask Claude: ...`
 4. Verify the bridge directly with `codex2claude ask --prompt "Reply with ok only" --workspace "$PWD"`.
+5. Run `codex2claude doctor --workspace "$PWD"` to confirm the Claude CLI and thread-state diagnostics.
 
 If direct CLI usage works but a natural-language trigger does not, the issue is skill discovery in that session, not the bridge itself.
 
@@ -203,6 +211,16 @@ Use `--new` when you want a fresh Claude conversation for the selected thread ke
 - `CODEX2CLAUDE_CLAUDE_BIN`: override the Claude executable path
 - `CODEX2CLAUDE_HOME`: override the bridge state root without changing your real shell `HOME`
 - `CODEX2CLAUDE_RUN_REAL=1`: enable opt-in real Claude integration tests
+
+## Doctor Output
+
+`codex2claude doctor --workspace "$PWD"` prints JSON and checks:
+
+- the resolved bridge root and key paths
+- whether the Claude CLI version can be read
+- whether the selected thread state is present, missing, or corrupted
+
+It returns `0` when required checks are healthy and non-zero when the Claude CLI check fails or thread state is corrupted.
 
 ## Test
 

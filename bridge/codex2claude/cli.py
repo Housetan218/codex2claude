@@ -50,6 +50,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     gc = subparsers.add_parser("gc")
     gc.add_argument("--max-age-days", type=int, default=7)
+
+    doctor = subparsers.add_parser("doctor")
+    doctor.add_argument("--workspace")
+    doctor.add_argument("--thread")
     return parser
 
 
@@ -216,6 +220,62 @@ def _handle_gc(args: argparse.Namespace) -> int:
     append_bridge_log({"action": "gc", "outcome": "success", "deleted": deleted})
     return EXIT_OK
 
+
+def _handle_doctor(args: argparse.Namespace) -> int:
+    workspace_root, thread_key = _thread_key(args.workspace, args.thread)
+    state_path = thread_file_path(thread_key)
+    claude_bin = os.environ.get("CODEX2CLAUDE_CLAUDE_BIN", "claude")
+    claude_version = read_claude_version(claude_bin)
+
+    thread_state_payload: dict[str, object]
+    if not state_path.exists():
+        thread_state_payload = {
+            "status": "missing",
+            "path": str(state_path),
+            "thread_key": thread_key,
+        }
+    else:
+        try:
+            state = load_thread_state(state_path)
+            thread_state_payload = {
+                "status": "ok",
+                "path": str(state_path),
+                "thread_key": thread_key,
+                "session_id": state.claude_session_id,
+                "last_status": state.last_status,
+                "last_used_at": state.last_used_at,
+            }
+        except BridgeError as exc:
+            thread_state_payload = {
+                "status": "error",
+                "path": str(state_path),
+                "thread_key": thread_key,
+                "message": str(exc),
+            }
+
+    payload = {
+        "ok": claude_version is not None and thread_state_payload["status"] != "error",
+        "bridge_version": __version__,
+        "workspace_root": workspace_root,
+        "bridge_root": {
+            "status": "ok",
+            "path": str(threads_dir().parent),
+        },
+        "paths": {
+            "threads": str(threads_dir()),
+            "logs": str(logs_dir()),
+            "state_file": str(state_path),
+        },
+        "claude": {
+            "status": "ok" if claude_version is not None else "error",
+            "bin": claude_bin,
+            "version": claude_version,
+        },
+        "thread_state": thread_state_payload,
+    }
+    sys.stdout.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    return EXIT_OK if payload["ok"] else EXIT_CLAUDE_ERROR
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     try:
@@ -228,6 +288,8 @@ def main(argv: list[str] | None = None) -> int:
             return _handle_forget(args)
         if args.command == "gc":
             return _handle_gc(args)
+        if args.command == "doctor":
+            return _handle_doctor(args)
         raise InvalidArgumentsError(f"Unknown command: {args.command}")
     except BridgeError as exc:
         append_bridge_log({"action": "error", "outcome": type(exc).__name__, "message": str(exc)})

@@ -42,6 +42,12 @@ Direct CLI smoke:
 codex2claude ask --prompt "Reply with ok only" --workspace "$PWD" --new
 ```
 
+Diagnostic smoke:
+
+```bash
+codex2claude doctor --workspace "$PWD"
+```
+
 Natural-language skill smoke in a fresh Codex session:
 
 ```bash
