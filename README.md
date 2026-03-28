@@ -108,6 +108,77 @@ The skill should stay thin. It should only:
 
 It should not own Claude JSON parsing, session files, or retries.
 
+Common trigger phrases that should explicitly steer Codex toward this skill:
+
+- `Use the codex-to-claude skill`
+- `ask Claude about this`
+- `send this to Claude`
+- `let Claude review this`
+- `ask cc`
+- `ask cc about this`
+- `cc review this`
+- `cc 怎么看`
+- `cc 觉得呢`
+- `cc 能帮忙看下吗`
+- `问问cc`
+- `问下Claude`
+- `Claude 怎么看`
+- `Claude 能看下吗`
+- `让cc帮忙看看`
+- `cc review下`
+- `cc check一下`
+- `give this to cc`
+- `给 Claude 看看`
+- `让 Claude 看一下`
+- `发给 Claude`
+- `给 cc 看看`
+- `让 cc review 一下`
+- `发给 cc`
+
+For stability, prefer phrases where `cc` appears with an action like ask, review, check, or look. Avoid relying on bare `cc` by itself.
+
+## Triggering
+
+Recommended everyday trigger phrases:
+
+- `给cc看看这个`
+- `问问cc`
+- `cc怎么看`
+- `让cc review一下`
+- `给Claude看看`
+
+More explicit variants:
+
+- `Use the codex-to-claude skill`
+- `ask Claude about this`
+- `ask cc`
+- `cc review this`
+- `给 cc 看看`
+- `问下Claude`
+
+## Activation Scope
+
+These paths are confirmed to work:
+
+- new Codex sessions started after the skill was installed
+- `codex exec` runs started after the skill was installed
+- direct `codex2claude` CLI usage
+
+Do not assume already-open Codex sessions will hot-reload newly installed or updated skills.
+
+If you changed trigger phrases or installed the skill during an existing session, restart Codex or open a fresh session before testing.
+
+## Troubleshooting
+
+If a trigger phrase does not route to Claude:
+
+1. Start a new Codex session.
+2. Test with a high-signal phrase such as `问问cc：请只回复 ok`.
+3. If needed, use the most explicit form: `Use the codex-to-claude skill. Ask Claude: ...`
+4. Verify the bridge directly with `codex2claude ask --prompt "Reply with ok only" --workspace "$PWD"`.
+
+If direct CLI usage works but a natural-language trigger does not, the issue is skill discovery in that session, not the bridge itself.
+
 ## Threading Model
 
 By default, one workspace maps to one Claude thread.
