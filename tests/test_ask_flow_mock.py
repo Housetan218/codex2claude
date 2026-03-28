@@ -28,6 +28,7 @@ FAKE_CLAUDE = textwrap.dedent(
         "is_error": False,
         "result": f"echo:{prompt}",
         "session_id": session_id or "new-session-123",
+        "modelUsage": {"claude-opus-4-6[1m]": {"inputTokens": 1, "outputTokens": 1}},
     }
     sys.stdout.write(json.dumps(payload))
     """
@@ -51,15 +52,125 @@ class AskFlowTest(unittest.TestCase):
             fake_claude.chmod(0o755)
 
             env = {"HOME": str(home), "CODEX2CLAUDE_CLAUDE_BIN": str(fake_claude)}
-            with mock.patch.dict(os.environ, env, clear=False), mock.patch("sys.stdout.write") as mock_write:
+            stdout_parts: list[str] = []
+            with mock.patch.dict(os.environ, env, clear=False), mock.patch(
+                "sys.stdout.write", side_effect=stdout_parts.append
+            ):
                 exit_code = main(["ask", "--prompt", "hello", "--workspace", str(workspace)])
                 thread_key = make_thread_key(str(workspace), None)
                 state_path = home / ".codex" / "codex2claude" / "threads" / f"{thread_key}.json"
                 state = json.loads(state_path.read_text(encoding="utf-8"))
 
         self.assertEqual(exit_code, 0)
-        self.assertTrue(mock_write.called)
+        self.assertEqual("".join(stdout_parts), "[model: claude-opus-4-6[1m]] echo:hello")
         self.assertEqual(state["claude_session_id"], "new-session-123")
+
+    def test_ask_json_output_includes_model_and_reply(self) -> None:
+        from codex2claude.cli import main
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            home = Path(temp_dir) / "home"
+            workspace = Path(temp_dir) / "workspace"
+            bin_dir = Path(temp_dir) / "bin"
+            home.mkdir()
+            workspace.mkdir()
+            bin_dir.mkdir()
+            fake_claude = bin_dir / "claude"
+            fake_claude.write_text(FAKE_CLAUDE, encoding="utf-8")
+            fake_claude.chmod(0o755)
+
+            env = {"HOME": str(home), "CODEX2CLAUDE_CLAUDE_BIN": str(fake_claude)}
+            stdout_parts: list[str] = []
+            with mock.patch.dict(os.environ, env, clear=False), mock.patch(
+                "sys.stdout.write", side_effect=stdout_parts.append
+            ):
+                exit_code = main(["ask", "--prompt", "hello", "--workspace", str(workspace), "--json"])
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads("".join(stdout_parts))
+        self.assertEqual(payload["model"], "claude-opus-4-6[1m]")
+        self.assertEqual(payload["reply"], "echo:hello")
+        self.assertEqual(payload["session_id"], "new-session-123")
+
+    def test_ask_defaults_model_to_unknown_when_payload_has_no_model(self) -> None:
+        from codex2claude.cli import main
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            home = Path(temp_dir) / "home"
+            workspace = Path(temp_dir) / "workspace"
+            bin_dir = Path(temp_dir) / "bin"
+            home.mkdir()
+            workspace.mkdir()
+            bin_dir.mkdir()
+            fake_claude = bin_dir / "claude"
+            fake_claude.write_text(
+                "#!/usr/bin/env python3\n"
+                "import json\n"
+                "import sys\n"
+                "args = sys.argv[1:]\n"
+                "prompt = args[args.index('-p') + 1]\n"
+                "payload = {\n"
+                "    'type': 'result',\n"
+                "    'subtype': 'success',\n"
+                "    'is_error': False,\n"
+                "    'result': f'echo:{prompt}',\n"
+                "    'session_id': 'new-session-123',\n"
+                "}\n"
+                "sys.stdout.write(json.dumps(payload))\n",
+                encoding="utf-8",
+            )
+            fake_claude.chmod(0o755)
+
+            env = {"HOME": str(home), "CODEX2CLAUDE_CLAUDE_BIN": str(fake_claude)}
+            stdout_parts: list[str] = []
+            with mock.patch.dict(os.environ, env, clear=False), mock.patch(
+                "sys.stdout.write", side_effect=stdout_parts.append
+            ):
+                exit_code = main(["ask", "--prompt", "hello", "--workspace", str(workspace)])
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual("".join(stdout_parts), "[model: unknown] echo:hello")
+
+    def test_ask_json_output_allows_null_session_id(self) -> None:
+        from codex2claude.cli import main
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            home = Path(temp_dir) / "home"
+            workspace = Path(temp_dir) / "workspace"
+            bin_dir = Path(temp_dir) / "bin"
+            home.mkdir()
+            workspace.mkdir()
+            bin_dir.mkdir()
+            fake_claude = bin_dir / "claude"
+            fake_claude.write_text(
+                "#!/usr/bin/env python3\n"
+                "import json\n"
+                "import sys\n"
+                "args = sys.argv[1:]\n"
+                "prompt = args[args.index('-p') + 1]\n"
+                "payload = {\n"
+                "    'type': 'result',\n"
+                "    'subtype': 'success',\n"
+                "    'is_error': False,\n"
+                "    'result': f'echo:{prompt}',\n"
+                "    'session_id': None,\n"
+                "    'modelUsage': {'claude-opus-4-6[1m]': {'inputTokens': 1, 'outputTokens': 1}},\n"
+                "}\n"
+                "sys.stdout.write(json.dumps(payload))\n",
+                encoding="utf-8",
+            )
+            fake_claude.chmod(0o755)
+
+            env = {"HOME": str(home), "CODEX2CLAUDE_CLAUDE_BIN": str(fake_claude)}
+            stdout_parts: list[str] = []
+            with mock.patch.dict(os.environ, env, clear=False), mock.patch(
+                "sys.stdout.write", side_effect=stdout_parts.append
+            ):
+                exit_code = main(["ask", "--prompt", "hello", "--workspace", str(workspace), "--json"])
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads("".join(stdout_parts))
+        self.assertIsNone(payload["session_id"])
 
     def test_second_ask_resumes_existing_session(self) -> None:
         from codex2claude.cli import main

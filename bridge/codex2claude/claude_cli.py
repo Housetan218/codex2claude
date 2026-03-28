@@ -11,6 +11,7 @@ from .errors import ClaudeInvocationError, ClaudeTimeoutError, StateCorruptionEr
 class ClaudeResult:
     session_id: str | None
     result_text: str
+    model_name: str | None
     raw_payload: dict[str, object]
     stderr_text: str
 
@@ -42,12 +43,33 @@ def parse_claude_response(stdout: str, stderr: str = "") -> ClaudeResult:
     if isinstance(session_id, str) and not session_id:
         raise StateCorruptionError("Claude JSON returned empty session_id")
 
+    model_name = _extract_model_name(payload)
+
     return ClaudeResult(
         session_id=session_id,
         result_text=result_text,
+        model_name=model_name,
         raw_payload=payload,
         stderr_text=stderr,
     )
+
+
+def _extract_model_name(payload: dict[str, object]) -> str | None:
+    direct_model = payload.get("model")
+    if isinstance(direct_model, str) and direct_model:
+        return direct_model
+
+    direct_model_name = payload.get("model_name")
+    if isinstance(direct_model_name, str) and direct_model_name:
+        return direct_model_name
+
+    model_usage = payload.get("modelUsage")
+    if isinstance(model_usage, dict):
+        model_keys = [key for key in model_usage if isinstance(key, str) and key]
+        if model_keys:
+            return next(iter(model_keys))
+
+    return None
 
 
 def invoke_claude(

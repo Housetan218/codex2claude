@@ -21,6 +21,12 @@ class ClaudeCliAdapterTest(unittest.TestCase):
                 "is_error": False,
                 "result": "hello",
                 "session_id": "session-123",
+                "modelUsage": {
+                    "claude-opus-4-6[1m]": {
+                        "inputTokens": 1,
+                        "outputTokens": 1,
+                    }
+                },
             }
         )
 
@@ -28,6 +34,24 @@ class ClaudeCliAdapterTest(unittest.TestCase):
 
         self.assertEqual(result.session_id, "session-123")
         self.assertEqual(result.result_text, "hello")
+        self.assertEqual(result.model_name, "claude-opus-4-6[1m]")
+
+    def test_parse_claude_response_without_model_usage_sets_unknown_model(self) -> None:
+        from codex2claude.claude_cli import parse_claude_response
+
+        payload = json.dumps(
+            {
+                "type": "result",
+                "subtype": "success",
+                "is_error": False,
+                "result": "hello",
+                "session_id": "session-123",
+            }
+        )
+
+        result = parse_claude_response(payload)
+
+        self.assertIsNone(result.model_name)
 
     def test_parse_claude_error_response_raises(self) -> None:
         from codex2claude.claude_cli import parse_claude_response

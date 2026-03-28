@@ -39,6 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     ask.add_argument("--thread")
     ask.add_argument("--new", action="store_true")
     ask.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT_SECONDS)
+    ask.add_argument("--json", action="store_true", dest="json_output")
 
     status = subparsers.add_parser("status")
     status.add_argument("--workspace")
@@ -95,6 +96,21 @@ def _write_run_record(thread_key: str, prompt: str, start_time: str, duration_ms
     save_run_record(run_path, record)
 
 
+def _render_ask_output(result_text: str, model_name: str | None, session_id: str | None, json_output: bool) -> str:
+    effective_model = model_name or "unknown"
+    if json_output:
+        return json.dumps(
+            {
+                "model": effective_model,
+                "reply": result_text,
+                "session_id": session_id,
+            },
+            indent=2,
+            sort_keys=True,
+        ) + "\n"
+    return f"[model: {effective_model}] {result_text}"
+
+
 def _handle_ask(args: argparse.Namespace) -> int:
     workspace_root, thread_key = _thread_key(args.workspace, args.thread)
     state_path = thread_file_path(thread_key)
@@ -139,7 +155,14 @@ def _handle_ask(args: argparse.Namespace) -> int:
             stderr_preview=result.stderr_text,
         )
         append_bridge_log({"action": "ask", "outcome": "success", "thread_key": thread_key, "used_resume": used_resume})
-        sys.stdout.write(result.result_text)
+        sys.stdout.write(
+            _render_ask_output(
+                result_text=result.result_text,
+                model_name=result.model_name,
+                session_id=result.session_id,
+                json_output=args.json_output,
+            )
+        )
     return EXIT_OK
 
 

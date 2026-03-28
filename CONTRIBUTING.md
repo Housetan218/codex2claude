@@ -42,6 +42,7 @@ Direct CLI smoke:
 
 ```bash
 codex2claude ask --prompt "Reply with ok only" --workspace "$PWD" --new
+codex2claude ask --prompt "Reply with ok only" --workspace "$PWD" --new --json
 ```
 
 Diagnostic smoke:

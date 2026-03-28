@@ -80,6 +80,12 @@ Force a fresh Claude session:
 codex2claude ask --prompt "Start over" --workspace "$PWD" --new
 ```
 
+Ask Claude and get structured output:
+
+```bash
+codex2claude ask --prompt "Review this design" --workspace "$PWD" --json
+```
+
 Inspect stored state:
 
 ```bash
@@ -205,6 +211,30 @@ codex2claude ask --prompt "Review docs tone" --workspace "$PWD" --thread docs
 ```
 
 Use `--new` when you want a fresh Claude conversation for the selected thread key.
+
+By default, `ask` now prefixes the visible reply with the resolved Claude model name:
+
+```text
+[model: claude-opus-4-6[1m]] <reply text>
+```
+
+Use `--json` when you need structured output instead of the prefixed text form. The JSON shape is:
+
+```json
+{
+  "model": "claude-opus-4-6[1m]",
+  "reply": "hello",
+  "session_id": "7f094c44-8dff-49dc-8830-70afe1135955"
+}
+```
+
+`session_id` may be `null` if Claude does not return a reusable session for that response.
+
+Model resolution rules:
+
+- prefer the first model key found in Claude's `modelUsage`
+- fall back to `model` or `model_name` if present
+- use `unknown` if the Claude payload does not expose model information
 
 ## Environment
 
