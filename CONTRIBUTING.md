@@ -107,6 +107,14 @@ If `codex2claude` does not yet exist on PyPI, create it with PyPI's Trusted Publ
 
 After that is configured on PyPI, pushing a tag like `v0.1.2` will build and publish the package without a manually managed API token.
 
+Fork checklist:
+
+- update `pyproject.toml` project metadata if your package name, homepage, or repository URL changes
+- update `.github/workflows/release.yml` environment URL if your PyPI project name changes
+- configure the PyPI trusted publisher for your fork owner, repository, workflow, and `pypi` environment
+- ensure your fork keeps `id-token: write` permission in the publish job
+- verify that your GitHub Actions are enabled for tag pushes in the fork
+
 ## Pull Requests
 
 - Keep changes focused.

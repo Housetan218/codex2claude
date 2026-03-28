@@ -307,6 +307,15 @@ The real-Claude test is opt-in because it spends actual Claude usage and require
 - `4`: invalid arguments
 - `5`: corrupted state or persistence failure
 
+Error-class mapping:
+
+- `BridgeError`: base error type, defaults to exit code `1`
+- `ClaudeInvocationError`: Claude CLI not found, non-zero Claude exit, or generic Claude failure, exit code `1`
+- `ClaudeTimeoutError`: Claude subprocess timeout, exit code `2`
+- `LockConflictError`: same-thread lock conflict, exit code `3`
+- `InvalidArgumentsError`: invalid CLI arguments or unsupported command path, exit code `4`
+- `StateCorruptionError`: malformed Claude JSON, invalid state shape, or corrupted persisted state, exit code `5`
+
 ## State Layout
 
 ```text
@@ -321,6 +330,70 @@ Important files:
 - `threads/<thread_key>.json`: current thread state and stored Claude `session_id`
 - `runs/<thread_key>/...json`: per-run artifacts
 - `logs/bridge.log`: append-only bridge events
+
+Typical thread-state shape:
+
+```json
+{
+  "thread_key": "<sha256>",
+  "workspace_root": "/path/to/repo",
+  "thread_name": null,
+  "claude_session_id": "<claude-session-id>",
+  "created_at": "2026-03-28T00:00:00Z",
+  "last_used_at": "2026-03-28T03:25:11Z",
+  "last_status": "ok",
+  "bridge_version": "0.1.3",
+  "claude_version": "2.x.x (Claude Code)",
+  "last_error": null
+}
+```
+
+Typical run-record shape:
+
+```json
+{
+  "run_id": "<uuid>",
+  "thread_key": "<sha256>",
+  "started_at": "2026-03-28T03:25:10Z",
+  "ended_at": "2026-03-28T03:25:11Z",
+  "duration_ms": 842,
+  "used_resume": true,
+  "prompt_sha256": "<sha256>",
+  "exit_code": 0,
+  "parse_ok": true,
+  "stdout_preview": "Claude reply preview",
+  "stderr_preview": ""
+}
+```
+
+## Skill Debugging
+
+When the natural-language trigger path is the problem, separate skill discovery from bridge behavior:
+
+1. Verify the bridge first:
+   `codex2claude ask --prompt "Reply with ok only" --workspace "$PWD" --new`
+2. Start a fresh Codex session before testing trigger changes.
+3. Use a high-signal trigger:
+   `问问cc：请只回复 ok，不要输出别的内容。`
+4. If that still fails, use the explicit form:
+   `Use the codex-to-claude skill. Ask Claude: Reply with ok only.`
+5. Check `skills/codex-to-claude/SKILL.md` for the exact trigger surface.
+
+Important limitations:
+
+- this repository does not provide a dedicated Codex skill-discovery log
+- `logs/bridge.log` only records bridge activity after `codex2claude` is actually invoked
+- if direct CLI usage works but the natural-language trigger does not, the failure is in session skill loading or skill routing, not in the bridge core
+- after editing `SKILL.md`, validate in a fresh Codex session; do not assume hot reload in an already-open session
+
+## FAQ
+
+- Why does resume fail after it worked earlier?
+  The saved Claude `session_id` may no longer be reusable, or the thread state may be corrupted. Run `codex2claude doctor --workspace "$PWD"`, then `codex2claude forget --workspace "$PWD"` if you need a clean thread.
+- What should I do when I hit a lock conflict?
+  Another process is already using the same workspace/thread key. Wait for the other run to finish, or use a different `--thread <name>` if you intentionally want a separate conversation.
+- Can multiple workspaces share one Claude thread?
+  Not by default. Thread identity includes the canonical workspace path, so different workspaces intentionally map to different thread keys unless you build a different policy.
 
 ## Current Scope
 
@@ -338,6 +411,9 @@ Bidirectional agent protocols are out of scope for v1.
 - Design: `docs/superpowers/specs/2026-03-28-codex-to-claude-design.md`
 - Plan: `docs/superpowers/plans/2026-03-28-codex-to-claude-v1.md`
 - Roadmap: `docs/roadmaps/2026-03-28-v0.2.0-roadmap.md`
+- Agent Guide: `AGENTS.md`
+- Architecture: `ARCHITECTURE.md`
+- Development Handbook: `DEVELOPMENT.md`
 
 ## Contributing
 
