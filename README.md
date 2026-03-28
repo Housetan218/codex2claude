@@ -40,6 +40,12 @@ source .venv/bin/activate
 python3 -m pip install -e .
 ```
 
+When a PyPI release is available, install with:
+
+```bash
+python3 -m pip install codex2claude
+```
+
 If you do not want to install it yet, you can run it directly:
 
 ```bash
@@ -253,3 +259,7 @@ Bidirectional agent protocols are out of scope for v1.
 
 - Design: `docs/superpowers/specs/2026-03-28-codex-to-claude-design.md`
 - Plan: `docs/superpowers/plans/2026-03-28-codex-to-claude-v1.md`
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for development, verification, and release steps.
