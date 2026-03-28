@@ -222,6 +222,66 @@ Use `--new` when you want a fresh Claude conversation for the selected thread ke
 
 It returns `0` when required checks are healthy and non-zero when the Claude CLI check fails or thread state is corrupted.
 
+Typical output shape:
+
+```json
+{
+  "ok": true,
+  "bridge_version": "0.1.3",
+  "workspace_root": "/path/to/repo",
+  "bridge_root": {
+    "status": "ok",
+    "path": "/Users/you/.codex/codex2claude"
+  },
+  "paths": {
+    "threads": "/Users/you/.codex/codex2claude/threads",
+    "logs": "/Users/you/.codex/codex2claude/logs",
+    "state_file": "/Users/you/.codex/codex2claude/threads/<thread_key>.json"
+  },
+  "claude": {
+    "status": "ok",
+    "bin": "claude",
+    "version": "2.x.x (Claude Code)"
+  },
+  "thread_state": {
+    "status": "ok",
+    "path": "/Users/you/.codex/codex2claude/threads/<thread_key>.json",
+    "thread_key": "<sha256>",
+    "session_id": "<claude-session-id>",
+    "last_status": "ok",
+    "last_used_at": "2026-03-28T03:25:11Z"
+  }
+}
+```
+
+Field meanings:
+
+- `ok`: overall health for the selected workspace thread
+- `bridge_version`: installed bridge version that produced the report
+- `workspace_root`: canonical workspace path used for thread identity
+- `bridge_root.path`: state root currently used by the bridge
+- `paths.state_file`: exact thread-state file for this workspace and thread name
+- `claude.status`: `ok` when `claude --version` can be read, otherwise `error`
+- `thread_state.status`: `ok`, `missing`, or `error`
+
+Interpretation guide:
+
+- `claude.status = ok` and `thread_state.status = missing`: healthy first-use state
+- `claude.status = ok` and `thread_state.status = ok`: healthy reusable thread state
+- `claude.status = error`: Claude CLI is not reachable from this shell
+- `thread_state.status = error`: the saved state file exists but could not be parsed or validated
+
+Common fixes:
+
+- Claude CLI unavailable:
+  Run `claude --version` directly. If that fails, fix your Claude CLI install or shell `PATH`. If you use a custom binary, set `CODEX2CLAUDE_CLAUDE_BIN`.
+- Unexpected bridge path:
+  Check whether `CODEX2CLAUDE_HOME` is set. If it is unset, the default state root is `~/.codex/codex2claude`.
+- Corrupted thread state:
+  Run `codex2claude forget --workspace "$PWD"` and retry `ask`. This removes the saved state for the selected thread key and allows a clean new session.
+- Wrong workspace identity:
+  `workspace_root` is canonicalized before hashing. If you expected a different thread, verify the exact `--workspace` path and any `--thread <name>` value you used.
+
 ## Test
 
 Run the main test suite:
@@ -277,6 +337,7 @@ Bidirectional agent protocols are out of scope for v1.
 
 - Design: `docs/superpowers/specs/2026-03-28-codex-to-claude-design.md`
 - Plan: `docs/superpowers/plans/2026-03-28-codex-to-claude-v1.md`
+- Roadmap: `docs/roadmaps/2026-03-28-v0.2.0-roadmap.md`
 
 ## Contributing
 
@@ -286,4 +347,6 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development, verification, and rele
 
 GitHub Actions runs unit tests and packaging checks on pushes and pull requests.
 
-PyPI publishing is wired through `.github/workflows/release.yml` and is intended to use PyPI Trusted Publishing from GitHub Actions. Repository maintainers still need to configure the matching trusted publisher entry on PyPI before tag-based publishing can succeed.
+PyPI publishing is wired through `.github/workflows/release.yml` and currently uses PyPI Trusted Publishing from GitHub Actions for the main repository. If you fork this project, configure the matching trusted publisher entry on PyPI before expecting tag-based publishing to succeed in your fork.
+
+For local packaging on Homebrew-managed Python, prefer a dedicated virtual environment for `build` and `twine` instead of installing them into the system interpreter.

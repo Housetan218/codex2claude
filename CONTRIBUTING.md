@@ -15,6 +15,8 @@ python3 -m pip install -e .
 If you need packaging checks locally:
 
 ```bash
+python3 -m venv .venv-release
+. .venv-release/bin/activate
 python3 -m pip install build twine
 ```
 
@@ -77,9 +79,11 @@ Before tagging a release:
 Build artifacts:
 
 ```bash
-python3 -m build
-python3 -m twine check dist/*
+.venv-release/bin/python -m build
+.venv-release/bin/python -m twine check dist/*
 ```
+
+If your system Python is Homebrew-managed and blocks direct `pip install`, use the dedicated `.venv-release` environment above instead of installing packaging tools globally.
 
 ## GitHub Actions
 
