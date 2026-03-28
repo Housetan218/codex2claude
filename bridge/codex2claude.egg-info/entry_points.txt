@@ -1,2 +1,0 @@
-[console_scripts]
-codex2claude = codex2claude.cli:main
